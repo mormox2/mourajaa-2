@@ -1,0 +1,32 @@
+<resources>
+    <string name="app_name">مراجعة</string>
+    <string name="app_slogan">معًا نحو مستقبل أفضل</string>
+    <string name="nav_home">الرئيسية</string>
+    <string name="nav_schedule">الجدول</string>
+    <string name="nav_subjects">المواد</string>
+    <string name="nav_settings">الإعدادات</string>
+    
+    <string name="greeting_morning">صباح الخير 👋</string>
+    <string name="today_classes">حصص اليوم</string>
+    <string name="night_review">مراجعة الليلة</string>
+    <string name="night_review_desc">برنامج المراجعة المقترح لمنزل هادئ ومرتب</string>
+    <string name="start_review_now">ابدأ المراجعة الآن</string>
+    <string name="tomorrow_preview">غدًا</string>
+    <string name="view_details">عرض التفاصيل</string>
+    
+    <string name="school_schedule">جدول المدرسة</string>
+    <string name="schedule_subtitle">تنظيم الحصص والواجبات اليومية</string>
+    <string name="add_class">إضافة حصة</string>
+    <string name="scan_schedule">تصوير الجدول</string>
+    
+    <string name="subjects_title">المواد الدراسية</string>
+    <string name="subjects_subtitle">تحديد مستوى الإتقان وزمن المراجعة الموصى به لكل مادة</string>
+    <string name="add_subject">إضافة مادة</string>
+    
+    <string name="settings_title">الإعدادات</string>
+    <string name="child_profile">بيانات الطفل</string>
+    <string name="reminders">التذكيرات</string>
+    <string name="default_review_time">مدة المراجعة الافتراضية</string>
+    <string name="app_language">اللغة</string>
+    <string name="dark_mode">الوضع الداكن</string>
+</resources>

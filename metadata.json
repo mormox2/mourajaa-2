@@ -1,0 +1,6 @@
+{
+  "name": "مراجعة",
+  "description": "تطبيق متابعة دراسة الطفل ومراجعة المواد وفق جدول المدرسة اليومي",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

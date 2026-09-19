@@ -1,0 +1,49 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    
+    <!-- Open Book Left Page -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M52,38 C44,35 34,36 26,38 C24.9,38.3 24,39.3 24,40.5 L24,71 C24,72.4 25.3,73.4 26.6,73.1 C33.8,71.5 43.5,70.8 52,74 Z" />
+
+    <!-- Open Book Right Page -->
+    <path
+        android:fillColor="#F0F4F9"
+        android:pathData="M56,38 C64,35 74,36 82,38 C83.1,38.3 84,39.3 84,40.5 L84,71 C84,72.4 82.7,73.4 81.4,73.1 C74.2,71.5 64.5,70.8 56,74 Z" />
+
+    <!-- Book Spine Divider -->
+    <path
+        android:fillColor="#D4E3FF"
+        android:pathData="M52.5,38 L55.5,38 L55.5,74.5 L52.5,74.5 Z" />
+
+    <!-- Subtle page lines (Left Page) -->
+    <path
+        android:fillColor="#7AB0FF"
+        android:pathData="M30,46 L47,43.5 C47.6,43.4 48,43.9 48,44.5 C48,45.1 47.5,45.5 47,45.6 L30,48 C29.4,48.1 29,47.6 29,47 C29,46.4 29.4,46.1 30,46 Z" />
+    <path
+        android:fillColor="#7AB0FF"
+        android:pathData="M30,52 L47,49.5 C47.6,49.4 48,49.9 48,50.5 C48,51.1 47.5,51.5 47,51.6 L30,54 C29.4,54.1 29,53.6 29,53 C29,52.4 29.4,52.1 30,52 Z" />
+    <path
+        android:fillColor="#7AB0FF"
+        android:pathData="M30,58 L44,56 C44.6,55.9 45,56.4 45,57 C45,57.6 44.5,58 44,58.1 L30,60 C29.4,60.1 29,59.6 29,59 C29,58.4 29.4,58.1 30,58 Z" />
+
+    <!-- Subtle page lines (Right Page) -->
+    <path
+        android:fillColor="#7AB0FF"
+        android:pathData="M61,43.5 L78,46 C78.6,46.1 79,46.6 79,47.2 C79,47.8 78.5,48.2 78,48.1 L61,45.6 C60.4,45.5 60,45 60,44.4 C60,43.8 60.5,43.4 61,43.5 Z" />
+    <path
+        android:fillColor="#7AB0FF"
+        android:pathData="M61,49.5 L78,52 C78.6,52.1 79,52.6 79,53.2 C79,53.8 78.5,54.2 78,54.1 L61,51.6 C60.4,51.5 60,51 60,50.4 C60,49.8 60.5,49.4 61,49.5 Z" />
+    <path
+        android:fillColor="#7AB0FF"
+        android:pathData="M64,56 L78,58 C78.6,58.1 79,58.6 79,59.2 C79,59.8 78.5,60.2 78,60.1 L64,58.1 C63.4,58 63,57.5 63,56.9 C63,56.3 63.5,55.9 64,56 Z" />
+
+    <!-- Golden Study Star (Focus & Excellence) at top center -->
+    <path
+        android:fillColor="#FFC107"
+        android:pathData="M54,23 L55.8,28.6 L61.7,28.6 L56.9,32.1 L58.7,37.7 L54,34.2 L49.3,37.7 L51.1,32.1 L46.3,28.6 L52.2,28.6 Z" />
+</vector>
