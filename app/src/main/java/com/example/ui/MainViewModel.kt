@@ -28,6 +28,10 @@ import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
+import android.graphics.Bitmap
+import com.example.data.remote.GeminiOcrService
+import com.example.data.remote.OcrResult
+import com.example.domain.ocr.ParsedScheduleItem
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 
@@ -43,6 +47,13 @@ sealed class Screen {
     object Settings : Screen()
     data class ReviewTimer(val subjectId: Long, val subjectName: String, val minutes: Int, val icon: String) : Screen()
     data class ReviewSummary(val subjectId: Long, val subjectName: String, val actualMinutes: Int) : Screen()
+}
+
+sealed class OcrUiState {
+    object Idle : OcrUiState()
+    data class Scanning(val statusMessage: String) : OcrUiState()
+    data class Review(val items: List<ParsedScheduleItem>) : OcrUiState()
+    data class Error(val message: String, val isApiKeyMissing: Boolean = false) : OcrUiState()
 }
 
 class MainViewModel(application: Application) : AndroidViewModel(application) {
@@ -339,6 +350,64 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             val current = activeChild.value ?: return@launch
             repository.updateChild(current.copy(avatarUri = avatarUri))
         }
+    }
+
+    // --- OCR Timetable Scanner Engine ---
+    private val geminiOcrService = GeminiOcrService()
+
+    private val _ocrState = MutableStateFlow<OcrUiState>(OcrUiState.Idle)
+    val ocrState: StateFlow<OcrUiState> = _ocrState.asStateFlow()
+
+    fun scanScheduleImage(bitmap: Bitmap) {
+        val configuredKey = reminderSettings.value?.geminiApiKey?.takeIf { it.isNotBlank() }
+            ?: GeminiOcrService.getBuildConfigApiKey()
+
+        if (configuredKey.isNullOrBlank()) {
+            _ocrState.value = OcrUiState.Error(
+                message = "مفتاح الذكاء الاصطناعي (Gemini API) غير محدد. يرجى إدخال المفتاح للبدء في مسح الجدول.",
+                isApiKeyMissing = true
+            )
+            return
+        }
+
+        _ocrState.value = OcrUiState.Scanning("جاري تحليل جدول المدرسة بالذكاء الاصطناعي...")
+        viewModelScope.launch {
+            val result = geminiOcrService.analyzeTimetableImage(
+                bitmap = bitmap,
+                apiKey = configuredKey,
+                existingSubjects = subjects.value
+            )
+            when (result) {
+                is OcrResult.Success -> {
+                    _ocrState.value = OcrUiState.Review(result.items)
+                }
+                is OcrResult.Error -> {
+                    _ocrState.value = OcrUiState.Error(result.message, result.isApiKeyMissing)
+                }
+            }
+        }
+    }
+
+    fun confirmOcrImport(selectedItems: List<ParsedScheduleItem>, replaceExisting: Boolean) {
+        viewModelScope.launch {
+            repository.importScheduleBatch(
+                childId = currentChildId(),
+                items = selectedItems,
+                replaceExisting = replaceExisting
+            )
+            refreshNightReviewPlan()
+            _ocrState.value = OcrUiState.Idle
+        }
+    }
+
+    fun saveGeminiApiKey(apiKey: String) {
+        viewModelScope.launch {
+            repository.updateGeminiApiKey(apiKey.trim())
+        }
+    }
+
+    fun resetOcrState() {
+        _ocrState.value = OcrUiState.Idle
     }
 
     private fun getTodayDateString(): String {

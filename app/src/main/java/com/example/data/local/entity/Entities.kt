@@ -66,7 +66,8 @@ data class ReminderSettingsEntity(
     val defaultReviewMinutes: Int = 20,
     val darkMode: Boolean = false,
     val parentPin: String = "1234",
-    val focusModePinRequired: Boolean = true
+    val focusModePinRequired: Boolean = true,
+    val geminiApiKey: String? = null
 )
 
 @Entity(tableName = "earned_badges")

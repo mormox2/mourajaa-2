@@ -249,6 +249,72 @@ class MuraajaRepository(private val db: AppDatabase) {
         db.scheduleDao().deleteEntryById(id)
     }
 
+    suspend fun importScheduleBatch(
+        childId: Long,
+        items: List<com.example.domain.ocr.ParsedScheduleItem>,
+        replaceExisting: Boolean
+    ): Int {
+        if (replaceExisting) {
+            db.scheduleDao().deleteScheduleForChild(childId)
+        }
+
+        val existingSubjects = db.subjectDao().getSubjectsForChildSync(childId).toMutableList()
+        val subjectMapByName = existingSubjects.associateBy { it.name.lowercase().trim() }.toMutableMap()
+
+        var importedCount = 0
+        for (item in items) {
+            val subjectId: Long = if (item.matchedSubjectId != null && item.matchedSubjectId > 0) {
+                item.matchedSubjectId
+            } else {
+                val existing = subjectMapByName[item.matchedSubjectName.lowercase().trim()]
+                if (existing != null) {
+                    existing.id
+                } else {
+                    val newSubjectId = db.subjectDao().insertSubject(
+                        SubjectEntity(
+                            childId = childId,
+                            name = item.matchedSubjectName,
+                            icon = item.icon,
+                            masteryLevel = 3,
+                            defaultReviewMinutes = 20
+                        )
+                    )
+                    val newSubject = SubjectEntity(
+                        id = newSubjectId,
+                        childId = childId,
+                        name = item.matchedSubjectName,
+                        icon = item.icon,
+                        masteryLevel = 3,
+                        defaultReviewMinutes = 20
+                    )
+                    existingSubjects.add(newSubject)
+                    subjectMapByName[item.matchedSubjectName.lowercase().trim()] = newSubject
+                    newSubjectId
+                }
+            }
+
+            db.scheduleDao().insertEntry(
+                ScheduleEntryEntity(
+                    childId = childId,
+                    subjectId = subjectId,
+                    dayOfWeek = item.dayOfWeek.key,
+                    startTime = item.startTime,
+                    endTime = item.endTime,
+                    lessonNote = item.lessonNote,
+                    teacherName = item.teacherName,
+                    classroom = item.classroom
+                )
+            )
+            importedCount++
+        }
+        return importedCount
+    }
+
+    suspend fun updateGeminiApiKey(key: String) {
+        val current = db.reminderSettingsDao().getSettingsSync() ?: ReminderSettingsEntity()
+        db.reminderSettingsDao().saveSettings(current.copy(geminiApiKey = key))
+    }
+
     fun getEarnedBadges(childId: Long): Flow<List<EarnedBadgeEntity>> =
         db.badgeDao().getEarnedBadges(childId)
 

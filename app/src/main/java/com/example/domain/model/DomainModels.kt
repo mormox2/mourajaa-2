@@ -15,6 +15,7 @@ enum class MasteryLevel(val stars: Int, val percentage: Int, val labelAr: String
 }
 
 enum class DayOfWeekAr(val key: String, val titleAr: String, val shortAr: String, val dayNumber: String) {
+    SUNDAY("SUNDAY", "الأحد", "أحد", "01"),
     MONDAY("MONDAY", "الإثنين", "إثنين", "02"),
     TUESDAY("TUESDAY", "الثلاثاء", "ثلاثاء", "03"),
     WEDNESDAY("WEDNESDAY", "الأربعاء", "أربعاء", "04"),
@@ -23,16 +24,17 @@ enum class DayOfWeekAr(val key: String, val titleAr: String, val shortAr: String
 
     companion object {
         fun fromKey(key: String): DayOfWeekAr {
-            return entries.find { it.key.equals(key, ignoreCase = true) } ?: TUESDAY
+            return entries.find { it.key.equals(key, ignoreCase = true) } ?: MONDAY
         }
 
         fun getNextSchoolDay(currentKey: String): DayOfWeekAr {
             return when (currentKey.uppercase()) {
+                "SUNDAY" -> MONDAY
                 "MONDAY" -> TUESDAY
                 "TUESDAY" -> WEDNESDAY
                 "WEDNESDAY" -> THURSDAY
                 "THURSDAY" -> FRIDAY
-                "FRIDAY" -> MONDAY
+                "FRIDAY" -> SUNDAY
                 else -> MONDAY
             }
         }

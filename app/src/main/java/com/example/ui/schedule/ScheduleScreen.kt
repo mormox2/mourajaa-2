@@ -13,6 +13,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -83,7 +84,7 @@ fun ScheduleScreen(viewModel: MainViewModel) {
     var showAddDialog by remember { mutableStateOf(false) }
     var entryToEdit by remember { mutableStateOf<ScheduleEntryEntity?>(null) }
     var entryToDelete by remember { mutableStateOf<Long?>(null) }
-    var showCameraTip by remember { mutableStateOf(false) }
+    var showOcrDialog by remember { mutableStateOf(false) }
 
     Box(modifier = Modifier.fillMaxSize()) {
         Column(
@@ -120,15 +121,16 @@ fun ScheduleScreen(viewModel: MainViewModel) {
 
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     IconButton(
-                        onClick = { showCameraTip = true },
+                        onClick = { showOcrDialog = true },
                         modifier = Modifier
                             .size(38.dp)
                             .clip(CircleShape)
                             .background(SurfaceContainer)
+                            .testTag("ocr_camera_button")
                     ) {
                         Icon(
                             imageVector = Icons.Default.PhotoCamera,
-                            contentDescription = "تصوير الجدول (مستقبلاً)",
+                            contentDescription = "المسح الذكي للجدول (OCR)",
                             tint = Primary,
                             modifier = Modifier.size(20.dp)
                         )
@@ -180,10 +182,11 @@ fun ScheduleScreen(viewModel: MainViewModel) {
                             color = if (isSelected) PrimaryFixed else MaterialTheme.colorScheme.outline
                         )
                         Text(
-                            text = day.titleAr,
-                            fontSize = 13.sp,
+                            text = day.shortAr,
+                            fontSize = 12.sp,
                             fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
-                            color = if (isSelected) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurface
+                            color = if (isSelected) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurface,
+                            maxLines = 1
                         )
                     }
                 }
@@ -274,11 +277,24 @@ fun ScheduleScreen(viewModel: MainViewModel) {
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
-                        Button(
-                            onClick = { showAddDialog = true },
-                            colors = ButtonDefaults.buttonColors(containerColor = Primary)
-                        ) {
-                            Text("إضافة أول حصة")
+                        Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                            androidx.compose.material3.OutlinedButton(
+                                onClick = { showOcrDialog = true }
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.PhotoCamera,
+                                    contentDescription = null,
+                                    modifier = Modifier.size(18.dp)
+                                )
+                                Spacer(modifier = Modifier.width(6.dp))
+                                Text("مسح بالكاميرا")
+                            }
+                            Button(
+                                onClick = { showAddDialog = true },
+                                colors = ButtonDefaults.buttonColors(containerColor = Primary)
+                            ) {
+                                Text("إضافة يدوية")
+                            }
                         }
                     }
                 }
@@ -523,24 +539,11 @@ fun ScheduleScreen(viewModel: MainViewModel) {
         )
     }
 
-    // Camera Future Feature Dialog
-    if (showCameraTip) {
-        AlertDialog(
-            onDismissRequest = { showCameraTip = false },
-            title = { Text("📷 تصوير جدول المدرسة") },
-            text = {
-                Text(
-                    "ميزة المسح الضوئي (OCR) لجدول المدرسة بالكاميرا مبرمجة للإصدار القادم (v2.0) كما في الخطة. يمكنك حالياً استخدام الإدخال اليدوي السريع بكل سهولة!"
-                )
-            },
-            confirmButton = {
-                Button(
-                    onClick = { showCameraTip = false },
-                    colors = ButtonDefaults.buttonColors(containerColor = Primary)
-                ) {
-                    Text("فهمت ذلك")
-                }
-            }
+    // OCR Timetable Scanner Dialog
+    if (showOcrDialog) {
+        OcrScheduleDialog(
+            viewModel = viewModel,
+            onDismiss = { showOcrDialog = false }
         )
     }
 }

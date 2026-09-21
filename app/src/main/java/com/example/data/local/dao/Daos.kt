@@ -124,6 +124,9 @@ interface ReminderSettingsDao {
     @Query("SELECT * FROM reminder_settings WHERE id = 1 LIMIT 1")
     fun getSettings(): Flow<ReminderSettingsEntity?>
 
+    @Query("SELECT * FROM reminder_settings WHERE id = 1 LIMIT 1")
+    suspend fun getSettingsSync(): ReminderSettingsEntity?
+
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun saveSettings(settings: ReminderSettingsEntity)
 }

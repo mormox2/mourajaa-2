@@ -18,6 +18,8 @@ class MuraajaDomainTest {
 
     @Test
     fun testDayOfWeek_nextSchoolDay() {
+        // Sunday -> Monday
+        assertEquals(DayOfWeekAr.MONDAY, DayOfWeekAr.getNextSchoolDay("SUNDAY"))
         // Monday -> Tuesday
         assertEquals(DayOfWeekAr.TUESDAY, DayOfWeekAr.getNextSchoolDay("MONDAY"))
         // Tuesday -> Wednesday
@@ -26,8 +28,8 @@ class MuraajaDomainTest {
         assertEquals(DayOfWeekAr.THURSDAY, DayOfWeekAr.getNextSchoolDay("WEDNESDAY"))
         // Thursday -> Friday
         assertEquals(DayOfWeekAr.FRIDAY, DayOfWeekAr.getNextSchoolDay("THURSDAY"))
-        // Friday -> Monday
-        assertEquals(DayOfWeekAr.MONDAY, DayOfWeekAr.getNextSchoolDay("FRIDAY"))
+        // Friday -> Sunday
+        assertEquals(DayOfWeekAr.SUNDAY, DayOfWeekAr.getNextSchoolDay("FRIDAY"))
     }
 
     @Test
