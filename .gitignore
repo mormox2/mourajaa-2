@@ -35,3 +35,10 @@ ehthumbs.db
 
 # Log files
 *.log
+
+# Database files
+*.db
+*.db-shm
+*.db-wal
+*.sqlite
+muraaja_database*

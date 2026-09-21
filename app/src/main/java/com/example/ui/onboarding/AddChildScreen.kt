@@ -77,6 +77,7 @@ fun AddChildScreen(
     var avatarUri by remember { mutableStateOf<String?>("👦") }
     var expandedDropdown by remember { mutableStateOf(false) }
     var selectedStageFilter by remember { mutableStateOf("الكل") }
+    var showError by remember { mutableStateOf(false) }
 
     // Real photo picker using ActivityResultContracts.PickVisualMedia
     val photoPickerLauncher = rememberLauncherForActivityResult(
@@ -211,7 +212,14 @@ fun AddChildScreen(
         // Inputs
         OutlinedTextField(
             value = childName,
-            onValueChange = { childName = it },
+            onValueChange = { 
+                childName = it 
+                if (it.isNotBlank()) showError = false
+            },
+            isError = showError,
+            supportingText = if (showError) {
+                { Text("يرجى كتابة اسم الطفل أولاً", color = MaterialTheme.colorScheme.error) }
+            } else null,
             label = { Text("اسم الطفل الكامل") },
             placeholder = { Text("مثلاً: رانية") },
             leadingIcon = {
@@ -308,8 +316,16 @@ fun AddChildScreen(
         // Action CTA
         Button(
             onClick = {
-                if (childName.isNotBlank()) {
-                    viewModel.saveNewChild(childName.trim(), selectedGrade, avatarUri)
+                val cleanName = childName.trim()
+                if (cleanName.isNotBlank()) {
+                    android.widget.Toast.makeText(
+                        context,
+                        "تم حفظ ملف «$cleanName» وتفعيله بنجاح! 🎉",
+                        android.widget.Toast.LENGTH_SHORT
+                    ).show()
+                    viewModel.saveNewChild(cleanName, selectedGrade, avatarUri)
+                } else {
+                    showError = true
                 }
             },
             colors = ButtonDefaults.buttonColors(containerColor = Primary),

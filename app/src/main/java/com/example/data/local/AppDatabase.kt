@@ -17,6 +17,7 @@ import com.example.data.local.entity.ReminderSettingsEntity
 import com.example.data.local.entity.ReviewSessionEntity
 import com.example.data.local.entity.ScheduleEntryEntity
 import com.example.data.local.entity.SubjectEntity
+import androidx.room.migration.Migration
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -30,7 +31,7 @@ import kotlinx.coroutines.launch
         ReminderSettingsEntity::class,
         EarnedBadgeEntity::class
     ],
-    version = 3,
+    version = 4,
     exportSchema = false
 )
 abstract class AppDatabase : RoomDatabase() {
@@ -42,6 +43,13 @@ abstract class AppDatabase : RoomDatabase() {
     abstract fun badgeDao(): BadgeDao
 
     companion object {
+        val MIGRATION_3_4 = object : Migration(3, 4) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("ALTER TABLE children ADD COLUMN isActive INTEGER NOT NULL DEFAULT 0")
+                db.execSQL("UPDATE children SET isActive = 1 WHERE id = (SELECT id FROM children ORDER BY id ASC LIMIT 1)")
+            }
+        }
+
         @Volatile
         private var INSTANCE: AppDatabase? = null
 
@@ -52,6 +60,7 @@ abstract class AppDatabase : RoomDatabase() {
                     AppDatabase::class.java,
                     "muraaja_database"
                 )
+                    .addMigrations(MIGRATION_3_4)
                     .fallbackToDestructiveMigration(true)
                     .addCallback(DatabaseCallback(scope))
                     .build()
@@ -84,7 +93,8 @@ abstract class AppDatabase : RoomDatabase() {
                 ChildEntity(
                     id = 1,
                     name = "أحمد",
-                    grade = "السنة الثانية ابتدائي"
+                    grade = "السنة الثانية ابتدائي",
+                    isActive = true
                 )
             )
 

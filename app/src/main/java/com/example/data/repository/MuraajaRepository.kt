@@ -72,7 +72,29 @@ class MuraajaRepository(private val db: AppDatabase) {
     }
 
     suspend fun saveChild(name: String, grade: String, avatarUri: String? = null): Long {
-        return db.childDao().insertChild(ChildEntity(name = name, grade = grade, avatarUri = avatarUri))
+        db.childDao().clearActiveChild()
+        val newChildId = db.childDao().insertChild(
+            ChildEntity(
+                name = name,
+                grade = grade,
+                avatarUri = avatarUri,
+                isActive = true
+            )
+        )
+        seedDefaultSubjectsForChild(newChildId, grade)
+        return newChildId
+    }
+
+    suspend fun switchActiveChild(childId: Long) {
+        db.childDao().clearActiveChild()
+        db.childDao().setActiveChild(childId)
+        val child = db.childDao().getChildById(childId)
+        if (child != null) {
+            val existingSubjects = db.subjectDao().getSubjectsForChildSync(childId)
+            if (existingSubjects.isEmpty()) {
+                seedDefaultSubjectsForChild(childId, child.grade)
+            }
+        }
     }
 
     suspend fun updateChild(child: ChildEntity) {
@@ -80,7 +102,65 @@ class MuraajaRepository(private val db: AppDatabase) {
     }
 
     suspend fun deleteChild(child: ChildEntity) {
-        db.childDao().deleteChild(child)
+        deleteChildById(child.id)
+    }
+
+    suspend fun deleteChildById(childId: Long) {
+        val wasActive = db.childDao().getChildById(childId)?.isActive == true
+        db.subjectDao().deleteSubjectsForChild(childId)
+        db.scheduleDao().deleteScheduleForChild(childId)
+        db.reviewSessionDao().deleteSessionsForChild(childId)
+        db.badgeDao().deleteBadgesForChild(childId)
+        db.childDao().deleteChildById(childId)
+
+        if (wasActive) {
+            val remaining = db.childDao().getActiveChildSync()
+            if (remaining != null) {
+                db.childDao().setActiveChild(remaining.id)
+            }
+        }
+    }
+
+    private suspend fun seedDefaultSubjectsForChild(childId: Long, grade: String) {
+        val isPrep = grade.contains("تحضيري") || grade.contains("روضة")
+        val isSecondary = grade.contains("ثانوي") || grade.contains("BAC")
+        val isMiddle = grade.contains("متوسط") || grade.contains("BEM")
+
+        val defaultSubjects = when {
+            isPrep -> listOf(
+                SubjectEntity(childId = childId, name = "الأنشطة اللغوية والتعبير", icon = "📖", masteryLevel = 4, defaultReviewMinutes = 15),
+                SubjectEntity(childId = childId, name = "الأنشطة الحسابية والمنطق", icon = "🔢", masteryLevel = 3, defaultReviewMinutes = 15),
+                SubjectEntity(childId = childId, name = "الرسم والأشغال اليدوية", icon = "🎨", masteryLevel = 5, defaultReviewMinutes = 15),
+                SubjectEntity(childId = childId, name = "التربية الإسلامية والسلوك", icon = "🕌", masteryLevel = 5, defaultReviewMinutes = 10)
+            )
+            isSecondary -> listOf(
+                SubjectEntity(childId = childId, name = "الرياضيات", icon = "📐", masteryLevel = 3, defaultReviewMinutes = 30),
+                SubjectEntity(childId = childId, name = "العلوم الفيزيائية والتكنولوجية", icon = "⚡", masteryLevel = 3, defaultReviewMinutes = 25),
+                SubjectEntity(childId = childId, name = "علوم الطبيعة والحياة", icon = "🧪", masteryLevel = 4, defaultReviewMinutes = 25),
+                SubjectEntity(childId = childId, name = "اللغة العربية وآدابها", icon = "📖", masteryLevel = 4, defaultReviewMinutes = 20),
+                SubjectEntity(childId = childId, name = "اللغة الفرنسية", icon = "🇫🇷", masteryLevel = 3, defaultReviewMinutes = 20),
+                SubjectEntity(childId = childId, name = "اللغة الإنجليزية", icon = "🇬🇧", masteryLevel = 4, defaultReviewMinutes = 20)
+            )
+            isMiddle -> listOf(
+                SubjectEntity(childId = childId, name = "اللغة العربية", icon = "📖", masteryLevel = 4, defaultReviewMinutes = 20),
+                SubjectEntity(childId = childId, name = "الرياضيات", icon = "📐", masteryLevel = 3, defaultReviewMinutes = 25),
+                SubjectEntity(childId = childId, name = "اللغة الفرنسية", icon = "🇫🇷", masteryLevel = 3, defaultReviewMinutes = 20),
+                SubjectEntity(childId = childId, name = "العلوم الطبيعية", icon = "🧪", masteryLevel = 4, defaultReviewMinutes = 20),
+                SubjectEntity(childId = childId, name = "الفيزياء والتكنولوجيا", icon = "🔬", masteryLevel = 3, defaultReviewMinutes = 20),
+                SubjectEntity(childId = childId, name = "اللغة الإنجليزية", icon = "🇬🇧", masteryLevel = 4, defaultReviewMinutes = 20),
+                SubjectEntity(childId = childId, name = "التربية الإسلامية", icon = "🕌", masteryLevel = 5, defaultReviewMinutes = 15)
+            )
+            else -> listOf(
+                SubjectEntity(childId = childId, name = "اللغة العربية", icon = "📖", masteryLevel = 4, defaultReviewMinutes = 20),
+                SubjectEntity(childId = childId, name = "الرياضيات", icon = "📐", masteryLevel = 3, defaultReviewMinutes = 20),
+                SubjectEntity(childId = childId, name = "اللغة الفرنسية (Français)", icon = "🇫🇷", masteryLevel = 3, defaultReviewMinutes = 20),
+                SubjectEntity(childId = childId, name = "التربية العلمية والتكنولوجية", icon = "🧪", masteryLevel = 4, defaultReviewMinutes = 15),
+                SubjectEntity(childId = childId, name = "التربية الإسلامية", icon = "🕌", masteryLevel = 5, defaultReviewMinutes = 15),
+                SubjectEntity(childId = childId, name = "اللغة الإنجليزية", icon = "🇬🇧", masteryLevel = 4, defaultReviewMinutes = 20)
+            )
+        }
+
+        db.subjectDao().insertSubjects(defaultSubjects)
     }
 
     suspend fun updateSubjectMastery(subjectId: Long, newMastery: Int, reviewMinutes: Int) {

@@ -16,7 +16,12 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.border
+import androidx.compose.ui.graphics.Color
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Edit
+import com.example.data.local.entity.ChildEntity
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Bedtime
 import androidx.compose.material.icons.filled.Info
@@ -77,6 +82,7 @@ fun SettingsScreen(
     onNavigateToAddChild: () -> Unit
 ) {
     val activeChild by viewModel.activeChild.collectAsState()
+    val allChildren by viewModel.allChildren.collectAsState()
     val settings by viewModel.reminderSettings.collectAsState()
     val parentPin by viewModel.parentPin.collectAsState()
     val badges by viewModel.badges.collectAsState()
@@ -87,6 +93,7 @@ fun SettingsScreen(
     var showAboutDialog by remember { mutableStateOf(false) }
     var showChangePinDialog by remember { mutableStateOf(false) }
     var showPinPreview by remember { mutableStateOf(false) }
+    var childToDelete by remember { mutableStateOf<ChildEntity?>(null) }
 
     val currentSettings = settings ?: ReminderSettingsEntity()
 
@@ -104,7 +111,7 @@ fun SettingsScreen(
             fontWeight = FontWeight.Bold
         )
 
-        // 1. Group: بيانات الطفل
+        // 1. Group: الأطفال المسجلون
         Card(
             modifier = Modifier.fillMaxWidth(),
             colors = CardDefaults.cardColors(containerColor = SurfaceContainerLowest),
@@ -116,76 +123,138 @@ fun SettingsScreen(
                 verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
                 Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    Icon(imageVector = Icons.Default.Person, contentDescription = null, tint = Primary)
-                    Text(
-                        text = "👦 ملف الطفل",
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.Bold
-                    )
-                }
-
-                Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Row(
-                        modifier = Modifier
-                            .clip(RoundedCornerShape(12.dp))
-                            .clickable { viewModel.navigateTo(Screen.EditProfile) }
-                            .padding(4.dp),
                         verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(12.dp)
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
-                        com.example.ui.components.ChildAvatarView(
-                            avatarUri = activeChild?.avatarUri,
-                            size = 52.dp,
-                            emojiSize = 28.sp,
-                            borderWidth = 2.dp,
-                            borderColor = Primary
+                        Icon(imageVector = Icons.Default.Person, contentDescription = null, tint = Primary)
+                        Text(
+                            text = "👦 الأطفال المسجلون (${allChildren.size})",
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.Bold
                         )
-                        Column {
-                            Row(
-                                verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.spacedBy(6.dp)
-                            ) {
-                                Text(
-                                    text = activeChild?.name ?: "أحمد",
-                                    style = MaterialTheme.typography.titleMedium,
-                                    fontWeight = FontWeight.Bold
-                                )
-                                Text(
-                                    text = "✏️",
-                                    fontSize = 14.sp
-                                )
-                            }
-                            Text(
-                                text = activeChild?.grade ?: "السنة الثانية ابتدائي (2AP)",
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                        }
                     }
 
-                    Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-                        TextButton(
-                            onClick = { viewModel.navigateTo(Screen.EditProfile) },
-                            modifier = Modifier.testTag("edit_child_profile_button")
+                    TextButton(onClick = onNavigateToAddChild) {
+                        Icon(imageVector = Icons.Default.PersonAdd, contentDescription = null, tint = Primary)
+                        Spacer(modifier = Modifier.size(4.dp))
+                        Text(text = "إضافة طفل", color = Primary, fontWeight = FontWeight.Bold)
+                    }
+                }
+
+                allChildren.forEach { child ->
+                    val isSelected = child.id == (activeChild?.id ?: -1L)
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clip(RoundedCornerShape(12.dp))
+                            .background(if (isSelected) PrimaryFixed.copy(alpha = 0.35f) else SurfaceContainerLow)
+                            .then(
+                                if (isSelected) Modifier.border(1.5.dp, Primary, RoundedCornerShape(12.dp))
+                                else Modifier
+                            )
+                            .clickable {
+                                if (!isSelected) {
+                                    viewModel.switchChild(child.id)
+                                }
+                            }
+                            .padding(10.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(10.dp),
+                            modifier = Modifier.weight(1f)
                         ) {
-                            Text(text = "تخصيص", color = Primary, fontWeight = FontWeight.Bold)
+                            com.example.ui.components.ChildAvatarView(
+                                avatarUri = child.avatarUri,
+                                size = 44.dp,
+                                emojiSize = 22.sp,
+                                borderWidth = if (isSelected) 2.dp else 1.dp,
+                                borderColor = if (isSelected) Primary else Color.LightGray
+                            )
+                            Column {
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(6.dp)
+                                ) {
+                                    Text(
+                                        text = child.name,
+                                        style = MaterialTheme.typography.titleMedium,
+                                        fontWeight = FontWeight.Bold
+                                    )
+                                    if (isSelected) {
+                                        Box(
+                                            modifier = Modifier
+                                                .clip(RoundedCornerShape(6.dp))
+                                                .background(Primary)
+                                                .padding(horizontal = 6.dp, vertical = 2.dp)
+                                        ) {
+                                            Text(
+                                                text = "المفعّل ✓",
+                                                style = MaterialTheme.typography.labelSmall,
+                                                color = Color.White,
+                                                fontWeight = FontWeight.Bold
+                                            )
+                                        }
+                                    }
+                                }
+                                Text(
+                                    text = child.grade,
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
                         }
-                        TextButton(onClick = onNavigateToAddChild) {
-                            Icon(imageVector = Icons.Default.PersonAdd, contentDescription = null, tint = Primary)
-                            Spacer(modifier = Modifier.size(4.dp))
-                            Text(text = "إضافة", color = Primary, fontWeight = FontWeight.Bold)
+
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(2.dp)
+                        ) {
+                            if (!isSelected) {
+                                TextButton(
+                                    onClick = { viewModel.switchChild(child.id) }
+                                ) {
+                                    Text(text = "تفعيل", color = Primary, fontWeight = FontWeight.Bold)
+                                }
+                            }
+                            IconButton(
+                                onClick = {
+                                    if (!isSelected) viewModel.switchChild(child.id)
+                                    viewModel.navigateTo(Screen.EditProfile)
+                                },
+                                modifier = Modifier.size(36.dp)
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.Edit,
+                                    contentDescription = "تعديل",
+                                    tint = Primary,
+                                    modifier = Modifier.size(18.dp)
+                                )
+                            }
+                            if (allChildren.size > 1) {
+                                IconButton(
+                                    onClick = { childToDelete = child },
+                                    modifier = Modifier.size(36.dp)
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Default.Delete,
+                                        contentDescription = "حذف",
+                                        tint = MaterialTheme.colorScheme.error,
+                                        modifier = Modifier.size(18.dp)
+                                    )
+                                }
+                            }
                         }
                     }
                 }
 
-                // Child Badges and Rewards Status
+                // Child Badges and Rewards Status for active child
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -205,7 +274,7 @@ fun SettingsScreen(
                             Text(text = "🏆", fontSize = 22.sp)
                             Column {
                                 Text(
-                                    text = "الأوسمة: $unlockedCount / ${badges.size} مكتملة",
+                                    text = "الأوسمة (${activeChild?.name ?: ""}): $unlockedCount / ${badges.size} مكتملة",
                                     style = MaterialTheme.typography.bodyMedium,
                                     fontWeight = FontWeight.Bold
                                 )
@@ -608,6 +677,35 @@ fun SettingsScreen(
             onPinUpdated = { newPin ->
                 viewModel.updateParentPin(newPin)
                 showChangePinDialog = false
+            }
+        )
+    }
+
+    childToDelete?.let { child ->
+        AlertDialog(
+            onDismissRequest = { childToDelete = null },
+            title = { Text("حذف ملف الطفل", fontWeight = FontWeight.Bold) },
+            text = {
+                Text(
+                    "هل أنت متأكد من رغبتك في حذف ملف «${child.name}»؟\n" +
+                    "سيتم حذف جميع الجداول والمواد وجلسات المراجعة الخاصة به نهائياً."
+                )
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        viewModel.deleteChild(child.id)
+                        childToDelete = null
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)
+                ) {
+                    Text("حذف نهائي", color = Color.White)
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { childToDelete = null }) {
+                    Text("إلغاء")
+                }
             }
         )
     }

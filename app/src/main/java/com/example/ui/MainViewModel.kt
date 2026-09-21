@@ -282,7 +282,22 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     fun saveNewChild(name: String, grade: String, avatarUri: String? = null) {
         viewModelScope.launch {
             repository.saveChild(name, grade, avatarUri)
+            refreshNightReviewPlan()
             _currentScreen.value = Screen.Home
+        }
+    }
+
+    fun switchChild(childId: Long) {
+        viewModelScope.launch {
+            repository.switchActiveChild(childId)
+            refreshNightReviewPlan()
+        }
+    }
+
+    fun deleteChild(childId: Long) {
+        viewModelScope.launch {
+            repository.deleteChildById(childId)
+            refreshNightReviewPlan()
         }
     }
 

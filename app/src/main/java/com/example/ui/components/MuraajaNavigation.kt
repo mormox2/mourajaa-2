@@ -21,12 +21,23 @@ import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Star
+import androidx.compose.material.icons.filled.ArrowDropDown
+import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.PersonAdd
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -35,6 +46,7 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.example.data.local.entity.ChildEntity
 import com.example.ui.Screen
 import com.example.ui.theme.Primary
 import com.example.ui.theme.PrimaryContainer
@@ -47,12 +59,17 @@ fun MuraajaTopBar(
     grade: String = "السنة الثانية ابتدائي",
     avatarUri: String? = null,
     totalStars: Int = 150,
+    allChildren: List<ChildEntity> = emptyList(),
+    onSwitchChild: (Long) -> Unit = {},
+    onAddChildClick: () -> Unit = {},
     onNotificationClick: () -> Unit = {},
     onAchievementsClick: () -> Unit = {},
     onProfileClick: () -> Unit = {},
     isFocusMode: Boolean = false,
     onUnlockClick: () -> Unit = {}
 ) {
+    var showChildMenu by remember { mutableStateOf(false) }
+
     Surface(
         color = MaterialTheme.colorScheme.surface,
         shadowElevation = 2.dp,
@@ -65,42 +82,133 @@ fun MuraajaTopBar(
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
-            // Profile & Greetings
-            Row(
-                modifier = Modifier
-                    .clip(RoundedCornerShape(12.dp))
-                    .clickable { onProfileClick() }
-                    .padding(4.dp),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(10.dp)
-            ) {
-                // Child Avatar Badge (Supports real photo or emoji)
-                ChildAvatarView(
-                    avatarUri = avatarUri,
-                    size = 46.dp,
-                    emojiSize = 24.sp,
-                    borderWidth = 1.5.dp,
-                    borderColor = Primary
-                )
+            // Profile & Greetings with Child Switcher Dropdown
+            Box {
+                Row(
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(12.dp))
+                        .clickable { showChildMenu = true }
+                        .padding(4.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(10.dp)
+                ) {
+                    // Child Avatar Badge (Supports real photo or emoji)
+                    ChildAvatarView(
+                        avatarUri = avatarUri,
+                        size = 46.dp,
+                        emojiSize = 24.sp,
+                        borderWidth = 1.5.dp,
+                        borderColor = Primary
+                    )
 
-                Column {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(4.dp)
-                    ) {
+                    Column {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(4.dp)
+                        ) {
+                            Text(
+                                text = "مرحباً، $childName",
+                                style = MaterialTheme.typography.titleMedium,
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.onSurface
+                            )
+                            Icon(
+                                imageVector = Icons.Default.ArrowDropDown,
+                                contentDescription = "تبديل الطفل",
+                                tint = Primary,
+                                modifier = Modifier.size(20.dp)
+                            )
+                        }
                         Text(
-                            text = "صباح الخير",
-                            style = MaterialTheme.typography.titleMedium,
-                            fontWeight = FontWeight.Bold,
-                            color = MaterialTheme.colorScheme.onSurface
+                            text = grade,
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            maxLines = 1
                         )
-                        Text(text = "👋", fontSize = 16.sp)
                     }
+                }
+
+                DropdownMenu(
+                    expanded = showChildMenu,
+                    onDismissRequest = { showChildMenu = false }
+                ) {
                     Text(
-                        text = "$childName - $grade",
-                        style = MaterialTheme.typography.bodySmall,
+                        text = "👦 ملفات الأطفال المسجلين:",
+                        style = MaterialTheme.typography.labelMedium,
+                        fontWeight = FontWeight.Bold,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        maxLines = 1
+                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
+                    )
+
+                    allChildren.forEach { child ->
+                        val isSelected = child.name == childName
+                        DropdownMenuItem(
+                            leadingIcon = {
+                                ChildAvatarView(
+                                    avatarUri = child.avatarUri,
+                                    size = 32.dp,
+                                    emojiSize = 16.sp,
+                                    borderWidth = if (isSelected) 2.dp else 1.dp,
+                                    borderColor = if (isSelected) Primary else Color.Transparent
+                                )
+                            },
+                            text = {
+                                Column {
+                                    Text(
+                                        text = child.name,
+                                        fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
+                                        color = if (isSelected) Primary else MaterialTheme.colorScheme.onSurface
+                                    )
+                                    Text(
+                                        text = child.grade,
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                }
+                            },
+                            trailingIcon = {
+                                if (isSelected) {
+                                    Icon(
+                                        imageVector = Icons.Default.Check,
+                                        contentDescription = "الطفل الحالي",
+                                        tint = Primary,
+                                        modifier = Modifier.size(18.dp)
+                                    )
+                                }
+                            },
+                            onClick = {
+                                onSwitchChild(child.id)
+                                showChildMenu = false
+                            }
+                        )
+                    }
+
+                    HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp))
+
+                    DropdownMenuItem(
+                        leadingIcon = {
+                            Icon(imageVector = Icons.Default.PersonAdd, contentDescription = null, tint = Primary)
+                        },
+                        text = {
+                            Text(text = "إضافة طفل جديد +", fontWeight = FontWeight.Bold, color = Primary)
+                        },
+                        onClick = {
+                            showChildMenu = false
+                            onAddChildClick()
+                        }
+                    )
+
+                    DropdownMenuItem(
+                        leadingIcon = {
+                            Icon(imageVector = Icons.Default.Edit, contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant)
+                        },
+                        text = {
+                            Text(text = "تعديل ملف $childName ✏️")
+                        },
+                        onClick = {
+                            showChildMenu = false
+                            onProfileClick()
+                        }
                     )
                 }
             }

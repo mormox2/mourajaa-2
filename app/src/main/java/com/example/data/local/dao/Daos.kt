@@ -22,8 +22,11 @@ interface ChildDao {
     @Query("SELECT * FROM children WHERE id = :id LIMIT 1")
     suspend fun getChildById(id: Long): ChildEntity?
 
-    @Query("SELECT * FROM children ORDER BY id ASC LIMIT 1")
+    @Query("SELECT * FROM children ORDER BY isActive DESC, id ASC LIMIT 1")
     fun getActiveChild(): Flow<ChildEntity?>
+
+    @Query("SELECT * FROM children ORDER BY isActive DESC, id ASC LIMIT 1")
+    suspend fun getActiveChildSync(): ChildEntity?
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertChild(child: ChildEntity): Long
@@ -33,12 +36,24 @@ interface ChildDao {
 
     @Delete
     suspend fun deleteChild(child: ChildEntity)
+
+    @Query("DELETE FROM children WHERE id = :id")
+    suspend fun deleteChildById(id: Long)
+
+    @Query("UPDATE children SET isActive = 0")
+    suspend fun clearActiveChild()
+
+    @Query("UPDATE children SET isActive = 1 WHERE id = :childId")
+    suspend fun setActiveChild(childId: Long)
 }
 
 @Dao
 interface SubjectDao {
     @Query("SELECT * FROM subjects WHERE childId = :childId ORDER BY id ASC")
     fun getSubjectsForChild(childId: Long): Flow<List<SubjectEntity>>
+
+    @Query("SELECT * FROM subjects WHERE childId = :childId ORDER BY id ASC")
+    suspend fun getSubjectsForChildSync(childId: Long): List<SubjectEntity>
 
     @Query("SELECT * FROM subjects WHERE id = :id LIMIT 1")
     suspend fun getSubjectById(id: Long): SubjectEntity?
@@ -54,6 +69,9 @@ interface SubjectDao {
 
     @Delete
     suspend fun deleteSubject(subject: SubjectEntity)
+
+    @Query("DELETE FROM subjects WHERE childId = :childId")
+    suspend fun deleteSubjectsForChild(childId: Long)
 }
 
 @Dao
@@ -81,6 +99,9 @@ interface ScheduleDao {
 
     @Query("DELETE FROM schedule_entries WHERE id = :id")
     suspend fun deleteEntryById(id: Long)
+
+    @Query("DELETE FROM schedule_entries WHERE childId = :childId")
+    suspend fun deleteScheduleForChild(childId: Long)
 }
 
 @Dao
@@ -93,6 +114,9 @@ interface ReviewSessionDao {
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertSession(session: ReviewSessionEntity): Long
+
+    @Query("DELETE FROM review_sessions WHERE childId = :childId")
+    suspend fun deleteSessionsForChild(childId: Long)
 }
 
 @Dao
@@ -117,5 +141,8 @@ interface BadgeDao {
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertEarnedBadge(badge: EarnedBadgeEntity): Long
+
+    @Query("DELETE FROM earned_badges WHERE childId = :childId")
+    suspend fun deleteBadgesForChild(childId: Long)
 }
 

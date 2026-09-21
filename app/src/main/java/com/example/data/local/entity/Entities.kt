@@ -9,7 +9,8 @@ data class ChildEntity(
     val id: Long = 0,
     val name: String,
     val grade: String,
-    val avatarUri: String? = null
+    val avatarUri: String? = null,
+    val isActive: Boolean = false
 )
 
 @Entity(tableName = "subjects")

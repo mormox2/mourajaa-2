@@ -29,4 +29,19 @@ class MuraajaDomainTest {
         // Friday -> Monday
         assertEquals(DayOfWeekAr.MONDAY, DayOfWeekAr.getNextSchoolDay("FRIDAY"))
     }
+
+    @Test
+    fun testChildEntity_activeFlag() {
+        val activeChild = com.example.data.local.entity.ChildEntity(
+            id = 1L,
+            name = "أيهم",
+            grade = "السنة الثانية ابتدائي (2AP)",
+            isActive = true
+        )
+        assertEquals(true, activeChild.isActive)
+        assertEquals("أيهم", activeChild.name)
+
+        val inactiveChild = activeChild.copy(isActive = false)
+        assertEquals(false, inactiveChild.isActive)
+    }
 }

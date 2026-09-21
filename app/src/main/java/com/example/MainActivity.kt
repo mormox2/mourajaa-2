@@ -68,6 +68,7 @@ fun MuraajaApp(viewModel: MainViewModel) {
     val isFocusModeActive by viewModel.isFocusModeActive.collectAsState()
     val parentPin by viewModel.parentPin.collectAsState()
     val totalStars by viewModel.totalEarnedStars.collectAsState()
+    val allChildren by viewModel.allChildren.collectAsState()
 
     val context = LocalContext.current
     val activity = context as? Activity
@@ -92,6 +93,9 @@ fun MuraajaApp(viewModel: MainViewModel) {
                     grade = activeChild?.grade ?: "السنة الثانية ابتدائي",
                     avatarUri = activeChild?.avatarUri,
                     totalStars = totalStars,
+                    allChildren = allChildren,
+                    onSwitchChild = { id -> viewModel.switchChild(id) },
+                    onAddChildClick = { viewModel.navigateTo(Screen.AddChild) },
                     onNotificationClick = { viewModel.navigateTo(Screen.Settings) },
                     onAchievementsClick = { viewModel.navigateTo(Screen.Achievements) },
                     onProfileClick = { viewModel.navigateTo(Screen.EditProfile) },
