@@ -32,6 +32,8 @@ import android.graphics.Bitmap
 import com.example.data.remote.GeminiOcrService
 import com.example.data.remote.OcrResult
 import com.example.domain.ocr.ParsedScheduleItem
+import com.example.notification.NotificationChannels
+import com.example.notification.NotificationScheduler
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 
@@ -45,6 +47,7 @@ sealed class Screen {
     object Subjects : Screen()
     object Achievements : Screen()
     object Settings : Screen()
+    object Notifications : Screen()
     data class ReviewTimer(val subjectId: Long, val subjectName: String, val minutes: Int, val icon: String) : Screen()
     data class ReviewSummary(val subjectId: Long, val subjectName: String, val actualMinutes: Int) : Screen()
 }
@@ -133,6 +136,19 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     private val _isFocusModeActive = MutableStateFlow(false)
     val isFocusModeActive: StateFlow<Boolean> = _isFocusModeActive.asStateFlow()
 
+    val todayClasses: StateFlow<List<ScheduleEntryEntity>> = combine(allScheduleEntries, _currentDay) { entries, day ->
+        entries.filter { it.dayOfWeek.equals(day.key, ignoreCase = true) }
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
+    val tomorrowClasses: StateFlow<List<ScheduleEntryEntity>> = combine(allScheduleEntries, _currentDay) { entries, day ->
+        val nextDay = DayOfWeekAr.getNextSchoolDay(day.key)
+        entries.filter { it.dayOfWeek.equals(nextDay.key, ignoreCase = true) }
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
+    val urgentSubjects: StateFlow<List<SubjectEntity>> = subjects.map { list ->
+        list.filter { it.masteryLevel <= 2 }
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
     // Parent PIN (default "1234")
     val parentPin: StateFlow<String> = reminderSettings
         .combine(MutableStateFlow("1234")) { settings, default ->
@@ -157,9 +173,17 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     init {
+        NotificationChannels.createChannels(application)
+
         viewModelScope.launch {
             activeChild.collect {
                 refreshNightReviewPlan()
+            }
+        }
+
+        viewModelScope.launch {
+            reminderSettings.collect { settings ->
+                NotificationScheduler.scheduleAllReminders(getApplication(), settings)
             }
         }
     }
@@ -251,6 +275,17 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     fun updateSubjectScheduledReminder(subjectId: Long, scheduledTime: String?, enabled: Boolean) {
         viewModelScope.launch {
             repository.updateSubjectScheduledReminder(subjectId, scheduledTime, enabled)
+            val sub = subjects.value.find { it.id == subjectId }
+            val subName = sub?.name ?: "المادة"
+            if (scheduledTime != null) {
+                NotificationScheduler.scheduleSubjectReminder(
+                    context = getApplication(),
+                    subjectId = subjectId,
+                    subjectName = subName,
+                    timeStr = scheduledTime,
+                    enabled = enabled
+                )
+            }
             refreshNightReviewPlan()
         }
     }
@@ -313,6 +348,28 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     fun updateSettings(settings: ReminderSettingsEntity) {
         viewModelScope.launch {
             repository.updateSettings(settings)
+            NotificationScheduler.scheduleAllReminders(getApplication(), settings)
+        }
+    }
+
+    fun sendTestNotification() {
+        NotificationScheduler.sendImmediateTestNotification(getApplication())
+    }
+
+    fun updateReminderTimes(
+        morningTime: String? = null,
+        previousDayTime: String? = null,
+        reviewTime: String? = null
+    ) {
+        viewModelScope.launch {
+            val current = reminderSettings.value ?: ReminderSettingsEntity()
+            val updated = current.copy(
+                morningTime = morningTime ?: current.morningTime,
+                previousDayTime = previousDayTime ?: current.previousDayTime,
+                reviewTime = reviewTime ?: current.reviewTime
+            )
+            repository.updateSettings(updated)
+            NotificationScheduler.scheduleAllReminders(getApplication(), updated)
         }
     }
 

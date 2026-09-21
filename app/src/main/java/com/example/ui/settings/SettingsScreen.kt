@@ -1,5 +1,11 @@
 package com.example.ui.settings
 
+import android.Manifest
+import android.content.pm.PackageManager
+import android.os.Build
+import android.widget.Toast
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -12,6 +18,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -28,6 +35,8 @@ import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Key
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.Notifications
+import androidx.compose.material.icons.filled.NotificationsActive
+import androidx.compose.material.icons.filled.NotificationsOff
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.PersonAdd
 import androidx.compose.material.icons.filled.Schedule
@@ -46,6 +55,7 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
 import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
@@ -58,6 +68,9 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
+import androidx.core.content.ContextCompat
+import com.example.ui.schedule.ScheduleTimePickerDialog
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
@@ -94,6 +107,27 @@ fun SettingsScreen(
     var showChangePinDialog by remember { mutableStateOf(false) }
     var showPinPreview by remember { mutableStateOf(false) }
     var childToDelete by remember { mutableStateOf<ChildEntity?>(null) }
+
+    val context = LocalContext.current
+    var hasNotificationPermission by remember {
+        mutableStateOf(
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                ContextCompat.checkSelfPermission(
+                    context,
+                    Manifest.permission.POST_NOTIFICATIONS
+                ) == PackageManager.PERMISSION_GRANTED
+            } else true
+        )
+    }
+
+    val permissionLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.RequestPermission()
+    ) { isGranted ->
+        hasNotificationPermission = isGranted
+        if (isGranted) {
+            Toast.makeText(context, "تم تفعيل إذن الإشعارات بنجاح! 🔔", Toast.LENGTH_SHORT).show()
+        }
+    }
 
     val currentSettings = settings ?: ReminderSettingsEntity()
 
@@ -317,23 +351,89 @@ fun SettingsScreen(
                     )
                 }
 
+                // Permission Warning Banner if missing on Android 13+
+                if (!hasNotificationPermission) {
+                    Surface(
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(10.dp),
+                        color = MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.6f)
+                    ) {
+                        Row(
+                            modifier = Modifier.padding(12.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(10.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.NotificationsOff,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.error
+                            )
+                            Column(modifier = Modifier.weight(1f)) {
+                                Text(
+                                    text = "إذن الإشعارات غير مفعل",
+                                    style = MaterialTheme.typography.titleSmall,
+                                    fontWeight = FontWeight.Bold,
+                                    color = MaterialTheme.colorScheme.onErrorContainer
+                                )
+                                Text(
+                                    text = "يلزم تفعيل إذن الإشعارات لتصلك التنبيهات في المواعيد المحددة.",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onErrorContainer
+                                )
+                            }
+                            Button(
+                                onClick = {
+                                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                                        permissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+                                    }
+                                },
+                                shape = RoundedCornerShape(8.dp),
+                                colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)
+                            ) {
+                                Text("تفعيل", color = Color.White, fontWeight = FontWeight.Bold)
+                            }
+                        }
+                    }
+                }
+
                 // Reminder 1: تذكير مواد الغد
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Column {
+                    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
                         Text(
                             text = "تذكير مواد الغد",
                             style = MaterialTheme.typography.titleSmall,
                             fontWeight = FontWeight.SemiBold
                         )
-                        Text(
-                            text = "الوقت: ${currentSettings.previousDayTime}",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = Primary
-                        )
+                        Surface(
+                            shape = RoundedCornerShape(8.dp),
+                            color = Primary.copy(alpha = 0.12f),
+                            modifier = Modifier.clickable {
+                                showEditTimeDialog = "PREVIOUS_DAY"
+                            }
+                        ) {
+                            Row(
+                                modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(4.dp)
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.Edit,
+                                    contentDescription = "تعديل",
+                                    tint = Primary,
+                                    modifier = Modifier.size(13.dp)
+                                )
+                                Text(
+                                    text = "الوقت: ${currentSettings.previousDayTime}",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = Primary,
+                                    fontWeight = FontWeight.Bold
+                                )
+                            }
+                        }
                     }
                     Switch(
                         checked = currentSettings.previousDayEnabled,
@@ -350,17 +450,38 @@ fun SettingsScreen(
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Column {
+                    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
                         Text(
                             text = "التذكير الصباحي وتجهيز الحقيبة",
                             style = MaterialTheme.typography.titleSmall,
                             fontWeight = FontWeight.SemiBold
                         )
-                        Text(
-                            text = "الوقت: ${currentSettings.morningTime}",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = Primary
-                        )
+                        Surface(
+                            shape = RoundedCornerShape(8.dp),
+                            color = Primary.copy(alpha = 0.12f),
+                            modifier = Modifier.clickable {
+                                showEditTimeDialog = "MORNING"
+                            }
+                        ) {
+                            Row(
+                                modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(4.dp)
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.Edit,
+                                    contentDescription = "تعديل",
+                                    tint = Primary,
+                                    modifier = Modifier.size(13.dp)
+                                )
+                                Text(
+                                    text = "الوقت: ${currentSettings.morningTime}",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = Primary,
+                                    fontWeight = FontWeight.Bold
+                                )
+                            }
+                        }
                     }
                     Switch(
                         checked = currentSettings.morningEnabled,
@@ -377,17 +498,38 @@ fun SettingsScreen(
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Column {
+                    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
                         Text(
                             text = "تذكير وقت المراجعة المسائية",
                             style = MaterialTheme.typography.titleSmall,
                             fontWeight = FontWeight.SemiBold
                         )
-                        Text(
-                            text = "الوقت: ${currentSettings.reviewTime}",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = Primary
-                        )
+                        Surface(
+                            shape = RoundedCornerShape(8.dp),
+                            color = Primary.copy(alpha = 0.12f),
+                            modifier = Modifier.clickable {
+                                showEditTimeDialog = "REVIEW"
+                            }
+                        ) {
+                            Row(
+                                modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(4.dp)
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.Edit,
+                                    contentDescription = "تعديل",
+                                    tint = Primary,
+                                    modifier = Modifier.size(13.dp)
+                                )
+                                Text(
+                                    text = "الوقت: ${currentSettings.reviewTime}",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = Primary,
+                                    fontWeight = FontWeight.Bold
+                                )
+                            }
+                        }
                     }
                     Switch(
                         checked = currentSettings.reviewTimeEnabled,
@@ -395,6 +537,31 @@ fun SettingsScreen(
                             viewModel.updateSettings(currentSettings.copy(reviewTimeEnabled = it))
                         },
                         colors = SwitchDefaults.colors(checkedThumbColor = Primary)
+                    )
+                }
+
+                // Test Notification Button
+                OutlinedButton(
+                    onClick = {
+                        viewModel.sendTestNotification()
+                        Toast.makeText(
+                            context,
+                            "تم إرسال إشعار تجريبي! تحقق من شريط التنبيهات 📱",
+                            Toast.LENGTH_SHORT
+                        ).show()
+                    },
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(10.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.NotificationsActive,
+                        contentDescription = null,
+                        modifier = Modifier.size(18.dp)
+                    )
+                    Spacer(Modifier.width(8.dp))
+                    Text(
+                        text = "اختبار إرسال إشعار فوري على هاتفك",
+                        fontWeight = FontWeight.SemiBold
                     )
                 }
             }
@@ -706,6 +873,37 @@ fun SettingsScreen(
                 TextButton(onClick = { childToDelete = null }) {
                     Text("إلغاء")
                 }
+            }
+        )
+    }
+
+    showEditTimeDialog?.let { dialogType ->
+        val title = when (dialogType) {
+            "PREVIOUS_DAY" -> "تعديل وقت تذكير مواد الغد"
+            "MORNING" -> "تعديل وقت التذكير الصباحي وتجهيز الحقيبة"
+            "REVIEW" -> "تعديل وقت المراجعة المسائية"
+            else -> "تعديل وقت التذكير"
+        }
+        val initialTime = when (dialogType) {
+            "PREVIOUS_DAY" -> currentSettings.previousDayTime
+            "MORNING" -> currentSettings.morningTime
+            "REVIEW" -> currentSettings.reviewTime
+            else -> "19:00"
+        }
+        ScheduleTimePickerDialog(
+            title = title,
+            initialTime = initialTime,
+            onDismiss = { showEditTimeDialog = null },
+            onConfirm = { newTime ->
+                val updated = when (dialogType) {
+                    "PREVIOUS_DAY" -> currentSettings.copy(previousDayTime = newTime)
+                    "MORNING" -> currentSettings.copy(morningTime = newTime)
+                    "REVIEW" -> currentSettings.copy(reviewTime = newTime)
+                    else -> currentSettings
+                }
+                viewModel.updateSettings(updated)
+                showEditTimeDialog = null
+                Toast.makeText(context, "تم حفظ الموعد الجديد ($newTime) بنجاح ⏰", Toast.LENGTH_SHORT).show()
             }
         )
     }

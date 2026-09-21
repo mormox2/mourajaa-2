@@ -66,7 +66,8 @@ fun MuraajaTopBar(
     onAchievementsClick: () -> Unit = {},
     onProfileClick: () -> Unit = {},
     isFocusMode: Boolean = false,
-    onUnlockClick: () -> Unit = {}
+    onUnlockClick: () -> Unit = {},
+    hasUnreadNotifications: Boolean = false
 ) {
     var showChildMenu by remember { mutableStateOf(false) }
 
@@ -279,14 +280,16 @@ fun MuraajaTopBar(
                             tint = Primary
                         )
                     }
-                    Box(
-                        modifier = Modifier
-                            .size(8.dp)
-                            .clip(CircleShape)
-                            .background(MaterialTheme.colorScheme.error)
-                            .align(Alignment.TopEnd)
-                            .padding(top = 8.dp, end = 8.dp)
-                    )
+                    if (hasUnreadNotifications) {
+                        Box(
+                            modifier = Modifier
+                                .size(8.dp)
+                                .clip(CircleShape)
+                                .background(MaterialTheme.colorScheme.error)
+                                .align(Alignment.TopEnd)
+                                .padding(top = 8.dp, end = 8.dp)
+                        )
+                    }
                 }
             }
         }

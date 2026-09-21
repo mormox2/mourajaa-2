@@ -1,6 +1,9 @@
 package com.example
 
+import android.Manifest
 import android.app.Activity
+import android.content.pm.PackageManager
+import android.os.Build
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.BackHandler
@@ -24,6 +27,9 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.unit.LayoutDirection
+import androidx.core.app.ActivityCompat
+import androidx.core.content.ContextCompat
+import com.example.notification.NotificationChannels
 import com.example.ui.MainViewModel
 import com.example.ui.Screen
 import com.example.ui.achievements.AchievementsScreen
@@ -31,6 +37,7 @@ import com.example.ui.components.MuraajaBottomNav
 import com.example.ui.components.MuraajaTopBar
 import com.example.ui.focus.ParentPinDialog
 import com.example.ui.home.HomeScreen
+import com.example.ui.notifications.NotificationsScreen
 import com.example.ui.onboarding.AddChildScreen
 import com.example.ui.review.ReviewSummaryScreen
 import com.example.ui.review.ReviewTimerScreen
@@ -46,6 +53,24 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
+
+        // Initialize Android notification channels
+        NotificationChannels.createChannels(this)
+
+        // Request POST_NOTIFICATIONS permission on Android 13+ (API 33+)
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            if (ContextCompat.checkSelfPermission(
+                    this,
+                    Manifest.permission.POST_NOTIFICATIONS
+                ) != PackageManager.PERMISSION_GRANTED
+            ) {
+                ActivityCompat.requestPermissions(
+                    this,
+                    arrayOf(Manifest.permission.POST_NOTIFICATIONS),
+                    101
+                )
+            }
+        }
 
         setContent {
             val settings by viewModel.reminderSettings.collectAsState()
@@ -69,6 +94,8 @@ fun MuraajaApp(viewModel: MainViewModel) {
     val parentPin by viewModel.parentPin.collectAsState()
     val totalStars by viewModel.totalEarnedStars.collectAsState()
     val allChildren by viewModel.allChildren.collectAsState()
+    val todayClasses by viewModel.todayClasses.collectAsState()
+    val urgentSubjects by viewModel.urgentSubjects.collectAsState()
 
     val context = LocalContext.current
     val activity = context as? Activity
@@ -83,7 +110,8 @@ fun MuraajaApp(viewModel: MainViewModel) {
     val isFullScreen = currentScreen is Screen.ReviewTimer ||
             currentScreen is Screen.ReviewSummary ||
             currentScreen is Screen.AddChild ||
-            currentScreen is Screen.EditProfile
+            currentScreen is Screen.EditProfile ||
+            currentScreen is Screen.Notifications
 
     Scaffold(
         topBar = {
@@ -96,7 +124,8 @@ fun MuraajaApp(viewModel: MainViewModel) {
                     allChildren = allChildren,
                     onSwitchChild = { id -> viewModel.switchChild(id) },
                     onAddChildClick = { viewModel.navigateTo(Screen.AddChild) },
-                    onNotificationClick = { viewModel.navigateTo(Screen.Settings) },
+                    onNotificationClick = { viewModel.navigateTo(Screen.Notifications) },
+                    hasUnreadNotifications = todayClasses.isNotEmpty() || urgentSubjects.isNotEmpty(),
                     onAchievementsClick = { viewModel.navigateTo(Screen.Achievements) },
                     onProfileClick = { viewModel.navigateTo(Screen.EditProfile) },
                     isFocusMode = isFocusModeActive,
@@ -149,6 +178,12 @@ fun MuraajaApp(viewModel: MainViewModel) {
                     SettingsScreen(
                         viewModel = viewModel,
                         onNavigateToAddChild = { viewModel.navigateTo(Screen.AddChild) }
+                    )
+                }
+                is Screen.Notifications -> {
+                    NotificationsScreen(
+                        viewModel = viewModel,
+                        onBack = { viewModel.navigateTo(Screen.Home) }
                     )
                 }
                 is Screen.AddChild -> {
