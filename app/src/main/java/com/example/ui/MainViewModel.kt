@@ -197,6 +197,32 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
+    fun updateScheduleEntry(
+        id: Long,
+        subjectId: Long,
+        dayOfWeek: String,
+        startTime: String,
+        endTime: String,
+        note: String,
+        teacher: String,
+        classroom: String
+    ) {
+        viewModelScope.launch {
+            repository.updateScheduleEntry(
+                id = id,
+                childId = currentChildId(),
+                subjectId = subjectId,
+                dayOfWeek = dayOfWeek,
+                startTime = startTime,
+                endTime = endTime,
+                note = note,
+                teacher = teacher,
+                classroom = classroom
+            )
+            refreshNightReviewPlan()
+        }
+    }
+
     fun deleteScheduleEntry(id: Long) {
         viewModelScope.launch {
             repository.deleteScheduleEntry(id)

@@ -219,6 +219,32 @@ class MuraajaRepository(private val db: AppDatabase) {
         )
     }
 
+    suspend fun updateScheduleEntry(
+        id: Long,
+        childId: Long,
+        subjectId: Long,
+        dayOfWeek: String,
+        startTime: String,
+        endTime: String,
+        note: String,
+        teacher: String,
+        classroom: String
+    ) {
+        db.scheduleDao().updateEntry(
+            ScheduleEntryEntity(
+                id = id,
+                childId = childId,
+                subjectId = subjectId,
+                dayOfWeek = dayOfWeek,
+                startTime = startTime,
+                endTime = endTime,
+                lessonNote = note,
+                teacherName = teacher,
+                classroom = classroom
+            )
+        )
+    }
+
     suspend fun deleteScheduleEntry(id: Long) {
         db.scheduleDao().deleteEntryById(id)
     }

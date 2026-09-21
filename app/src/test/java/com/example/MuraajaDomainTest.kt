@@ -44,4 +44,36 @@ class MuraajaDomainTest {
         val inactiveChild = activeChild.copy(isActive = false)
         assertEquals(false, inactiveChild.isActive)
     }
+
+    @Test
+    fun testScheduleTimeUtils_parseAndFormat() {
+        val minutes = com.example.ui.schedule.ScheduleTimeUtils.parseTimeToMinutes("08:30")
+        assertEquals(510, minutes)
+        val formatted = com.example.ui.schedule.ScheduleTimeUtils.formatMinutesToTime(510)
+        assertEquals("08:30", formatted)
+    }
+
+    @Test
+    fun testScheduleTimeUtils_addMinutes() {
+        val result1 = com.example.ui.schedule.ScheduleTimeUtils.addMinutes("08:00", 60)
+        assertEquals("09:00", result1)
+
+        val result2 = com.example.ui.schedule.ScheduleTimeUtils.addMinutes("11:45", 45)
+        assertEquals("12:30", result2)
+
+        val result3 = com.example.ui.schedule.ScheduleTimeUtils.addMinutes("13:30", 90)
+        assertEquals("15:00", result3)
+    }
+
+    @Test
+    fun testScheduleTimeUtils_durationCalculation() {
+        val duration = com.example.ui.schedule.ScheduleTimeUtils.calculateDurationMinutes("08:00", "09:30")
+        assertEquals(90, duration)
+
+        val text = com.example.ui.schedule.ScheduleTimeUtils.formatDurationArabic(60)
+        assertEquals("ساعة واحدة", text)
+
+        val text2 = com.example.ui.schedule.ScheduleTimeUtils.formatDurationArabic(90)
+        assertEquals("1 ساعة و 30 دقيقة", text2)
+    }
 }

@@ -20,6 +20,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.MeetingRoom
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.PhotoCamera
@@ -28,6 +29,8 @@ import androidx.compose.material.icons.filled.TaskAlt
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
+import com.example.data.local.entity.ScheduleEntryEntity
+import com.example.data.local.entity.SubjectEntity
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.DropdownMenuItem
@@ -78,6 +81,7 @@ fun ScheduleScreen(viewModel: MainViewModel) {
     val dayEntries = allEntries.filter { it.dayOfWeek.equals(selectedDay.key, ignoreCase = true) }
 
     var showAddDialog by remember { mutableStateOf(false) }
+    var entryToEdit by remember { mutableStateOf<ScheduleEntryEntity?>(null) }
     var entryToDelete by remember { mutableStateOf<Long?>(null) }
     var showCameraTip by remember { mutableStateOf(false) }
 
@@ -282,7 +286,11 @@ fun ScheduleScreen(viewModel: MainViewModel) {
                 dayEntries.forEach { entry ->
                     val subject = subjectMap[entry.subjectId]
                     Card(
-                        modifier = Modifier.fillMaxWidth(),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clip(RoundedCornerShape(14.dp))
+                            .clickable { entryToEdit = entry }
+                            .testTag("schedule_card_${entry.id}"),
                         colors = CardDefaults.cardColors(containerColor = SurfaceContainerLowest),
                         shape = RoundedCornerShape(14.dp),
                         elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
@@ -291,7 +299,7 @@ fun ScheduleScreen(viewModel: MainViewModel) {
                             modifier = Modifier.padding(14.dp),
                             verticalArrangement = Arrangement.spacedBy(10.dp)
                         ) {
-                            // Top Row Time & Delete Action
+                            // Top Row Time & Actions (Edit + Delete)
                             Row(
                                 modifier = Modifier.fillMaxWidth(),
                                 horizontalArrangement = Arrangement.SpaceBetween,
@@ -315,16 +323,34 @@ fun ScheduleScreen(viewModel: MainViewModel) {
                                     )
                                 }
 
-                                IconButton(
-                                    onClick = { entryToDelete = entry.id },
-                                    modifier = Modifier.size(30.dp)
-                                ) {
-                                    Icon(
-                                        imageVector = Icons.Default.Delete,
-                                        contentDescription = "حذف الحصة",
-                                        tint = MaterialTheme.colorScheme.error,
-                                        modifier = Modifier.size(18.dp)
-                                    )
+                                Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                                    IconButton(
+                                        onClick = { entryToEdit = entry },
+                                        modifier = Modifier
+                                            .size(30.dp)
+                                            .testTag("edit_entry_${entry.id}")
+                                    ) {
+                                        Icon(
+                                            imageVector = Icons.Default.Edit,
+                                            contentDescription = "تعديل الحصة والتوقيت",
+                                            tint = Primary,
+                                            modifier = Modifier.size(18.dp)
+                                        )
+                                    }
+
+                                    IconButton(
+                                        onClick = { entryToDelete = entry.id },
+                                        modifier = Modifier
+                                            .size(30.dp)
+                                            .testTag("delete_entry_${entry.id}")
+                                    ) {
+                                        Icon(
+                                            imageVector = Icons.Default.Delete,
+                                            contentDescription = "حذف الحصة",
+                                            tint = MaterialTheme.colorScheme.error,
+                                            modifier = Modifier.size(18.dp)
+                                        )
+                                    }
                                 }
                             }
 
@@ -429,127 +455,45 @@ fun ScheduleScreen(viewModel: MainViewModel) {
         }
     }
 
-    // Add Class Dialog
-    if (showAddDialog) {
-        var selectedSubjectId by remember { mutableStateOf(subjects.firstOrNull()?.id ?: 1L) }
-        var startTime by remember { mutableStateOf("09:00") }
-        var endTime by remember { mutableStateOf("10:00") }
-        var note by remember { mutableStateOf("") }
-        var teacher by remember { mutableStateOf("") }
-        var classroom by remember { mutableStateOf("") }
-        var expandedDropdown by remember { mutableStateOf(false) }
-
-        val selectedSubject = subjects.find { it.id == selectedSubjectId }
-
-        AlertDialog(
-            onDismissRequest = { showAddDialog = false },
-            title = {
-                Text(
-                    text = "إضافة حصة جديدة (${selectedDay.titleAr})",
-                    fontWeight = FontWeight.Bold
-                )
+    // Add / Edit Class Dialog
+    if (showAddDialog || entryToEdit != null) {
+        val isEditing = entryToEdit != null
+        ScheduleEntryDialog(
+            isEditing = isEditing,
+            initialEntry = entryToEdit,
+            dayTitle = selectedDay.titleAr,
+            subjects = subjects,
+            onDismiss = {
+                showAddDialog = false
+                entryToEdit = null
             },
-            text = {
-                Column(
-                    verticalArrangement = Arrangement.spacedBy(10.dp),
-                    modifier = Modifier.verticalScroll(rememberScrollState())
-                ) {
-                    // Subject Selector
-                    ExposedDropdownMenuBox(
-                        expanded = expandedDropdown,
-                        onExpandedChange = { expandedDropdown = !expandedDropdown }
-                    ) {
-                        OutlinedTextField(
-                            value = "${selectedSubject?.icon ?: "📖"} ${selectedSubject?.name ?: "اختر مادة"}",
-                            onValueChange = {},
-                            readOnly = true,
-                            label = { Text("المادة") },
-                            trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expandedDropdown) },
-                            modifier = Modifier
-                                .menuAnchor(MenuAnchorType.PrimaryNotEditable)
-                                .fillMaxWidth()
-                        )
-                        ExposedDropdownMenu(
-                            expanded = expandedDropdown,
-                            onDismissRequest = { expandedDropdown = false }
-                        ) {
-                            subjects.forEach { subject ->
-                                DropdownMenuItem(
-                                    text = { Text("${subject.icon} ${subject.name}") },
-                                    onClick = {
-                                        selectedSubjectId = subject.id
-                                        expandedDropdown = false
-                                    }
-                                )
-                            }
-                        }
-                    }
-
-                    // Times
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(8.dp)
-                    ) {
-                        OutlinedTextField(
-                            value = startTime,
-                            onValueChange = { startTime = it },
-                            label = { Text("من") },
-                            modifier = Modifier.weight(1f)
-                        )
-                        OutlinedTextField(
-                            value = endTime,
-                            onValueChange = { endTime = it },
-                            label = { Text("إلى") },
-                            modifier = Modifier.weight(1f)
-                        )
-                    }
-
-                    OutlinedTextField(
-                        value = note,
-                        onValueChange = { note = it },
-                        label = { Text("ملاحظة الدرس / الواجب") },
-                        placeholder = { Text("مثلاً: قراءة ص 14") },
-                        modifier = Modifier.fillMaxWidth()
-                    )
-
-                    OutlinedTextField(
-                        value = teacher,
-                        onValueChange = { teacher = it },
-                        label = { Text("اسم الأستاذ (اختياري)") },
-                        modifier = Modifier.fillMaxWidth()
-                    )
-
-                    OutlinedTextField(
-                        value = classroom,
-                        onValueChange = { classroom = it },
-                        label = { Text("القاعة (اختياري)") },
-                        modifier = Modifier.fillMaxWidth()
-                    )
-                }
-            },
-            confirmButton = {
-                Button(
-                    onClick = {
-                        viewModel.addScheduleEntry(
-                            subjectId = selectedSubjectId,
-                            dayOfWeek = selectedDay.key,
+            onConfirm = { subjectId, startTime, endTime, note, teacher, classroom ->
+                if (isEditing) {
+                    entryToEdit?.let { existing ->
+                        viewModel.updateScheduleEntry(
+                            id = existing.id,
+                            subjectId = subjectId,
+                            dayOfWeek = existing.dayOfWeek,
                             startTime = startTime,
                             endTime = endTime,
                             note = note,
                             teacher = teacher,
                             classroom = classroom
                         )
-                        showAddDialog = false
-                    },
-                    colors = ButtonDefaults.buttonColors(containerColor = Primary)
-                ) {
-                    Text("حفظ الحصة")
+                    }
+                } else {
+                    viewModel.addScheduleEntry(
+                        subjectId = subjectId,
+                        dayOfWeek = selectedDay.key,
+                        startTime = startTime,
+                        endTime = endTime,
+                        note = note,
+                        teacher = teacher,
+                        classroom = classroom
+                    )
                 }
-            },
-            dismissButton = {
-                TextButton(onClick = { showAddDialog = false }) {
-                    Text("إلغاء")
-                }
+                showAddDialog = false
+                entryToEdit = null
             }
         )
     }
@@ -599,4 +543,156 @@ fun ScheduleScreen(viewModel: MainViewModel) {
             }
         )
     }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun ScheduleEntryDialog(
+    isEditing: Boolean,
+    initialEntry: ScheduleEntryEntity?,
+    dayTitle: String,
+    subjects: List<SubjectEntity>,
+    onDismiss: () -> Unit,
+    onConfirm: (
+        subjectId: Long,
+        startTime: String,
+        endTime: String,
+        note: String,
+        teacher: String,
+        classroom: String
+    ) -> Unit
+) {
+    var selectedSubjectId by remember {
+        mutableStateOf(initialEntry?.subjectId ?: subjects.firstOrNull()?.id ?: 1L)
+    }
+    var startTime by remember {
+        mutableStateOf(initialEntry?.startTime ?: "08:00")
+    }
+    var endTime by remember {
+        mutableStateOf(initialEntry?.endTime ?: "09:00")
+    }
+    var note by remember {
+        mutableStateOf(initialEntry?.lessonNote ?: "")
+    }
+    var teacher by remember {
+        mutableStateOf(initialEntry?.teacherName ?: "")
+    }
+    var classroom by remember {
+        mutableStateOf(initialEntry?.classroom ?: "")
+    }
+    var expandedDropdown by remember { mutableStateOf(false) }
+
+    val selectedSubject = subjects.find { it.id == selectedSubjectId }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                Icon(
+                    imageVector = if (isEditing) Icons.Default.Edit else Icons.Default.Add,
+                    contentDescription = null,
+                    tint = Primary
+                )
+                Text(
+                    text = if (isEditing) "تعديل الحصة ($dayTitle)" else "إضافة حصة جديدة ($dayTitle)",
+                    fontWeight = FontWeight.Bold
+                )
+            }
+        },
+        text = {
+            Column(
+                verticalArrangement = Arrangement.spacedBy(12.dp),
+                modifier = Modifier.verticalScroll(rememberScrollState())
+            ) {
+                // Subject Selector
+                ExposedDropdownMenuBox(
+                    expanded = expandedDropdown,
+                    onExpandedChange = { expandedDropdown = !expandedDropdown }
+                ) {
+                    OutlinedTextField(
+                        value = "${selectedSubject?.icon ?: "📖"} ${selectedSubject?.name ?: "اختر مادة"}",
+                        onValueChange = {},
+                        readOnly = true,
+                        label = { Text("المادة") },
+                        trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expandedDropdown) },
+                        modifier = Modifier
+                            .menuAnchor(MenuAnchorType.PrimaryNotEditable)
+                            .fillMaxWidth()
+                    )
+                    ExposedDropdownMenu(
+                        expanded = expandedDropdown,
+                        onDismissRequest = { expandedDropdown = false }
+                    ) {
+                        subjects.forEach { subject ->
+                            DropdownMenuItem(
+                                text = { Text("${subject.icon} ${subject.name}") },
+                                onClick = {
+                                    selectedSubjectId = subject.id
+                                    expandedDropdown = false
+                                }
+                            )
+                        }
+                    }
+                }
+
+                // Simplified Time Selection with Slots, M3 Pickers, and Durations
+                TimeRangeSelectorSection(
+                    startTime = startTime,
+                    endTime = endTime,
+                    onTimeRangeChanged = { newStart, newEnd ->
+                        startTime = newStart
+                        endTime = newEnd
+                    }
+                )
+
+                OutlinedTextField(
+                    value = note,
+                    onValueChange = { note = it },
+                    label = { Text("ملاحظة الدرس / الواجب") },
+                    placeholder = { Text("مثلاً: حل تمارين ص 22") },
+                    modifier = Modifier.fillMaxWidth()
+                )
+
+                OutlinedTextField(
+                    value = teacher,
+                    onValueChange = { teacher = it },
+                    label = { Text("اسم الأستاذ (اختياري)") },
+                    modifier = Modifier.fillMaxWidth()
+                )
+
+                OutlinedTextField(
+                    value = classroom,
+                    onValueChange = { classroom = it },
+                    label = { Text("القاعة (اختياري)") },
+                    modifier = Modifier.fillMaxWidth()
+                )
+            }
+        },
+        confirmButton = {
+            Button(
+                onClick = {
+                    onConfirm(
+                        selectedSubjectId,
+                        startTime,
+                        endTime,
+                        note,
+                        teacher,
+                        classroom
+                    )
+                },
+                colors = ButtonDefaults.buttonColors(containerColor = Primary),
+                modifier = Modifier.testTag("save_schedule_entry_button")
+            ) {
+                Text(if (isEditing) "حفظ التعديلات" else "حفظ الحصة")
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text("إلغاء")
+            }
+        }
+    )
 }
