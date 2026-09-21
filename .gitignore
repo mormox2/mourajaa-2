@@ -1,21 +1,37 @@
-*.iml
-.gradle
-.kotlin
-/local.properties
-/.idea/caches
-/.idea/libraries
-/.idea/modules.xml
-/.idea/workspace.xml
-/.idea/navEditor.xml
-/.idea/assetWizardSettings.xml
-.DS_Store
-/build
-/captures
-.externalNativeBuild
-.cxx
-local.properties
-.env
-debug.keystore
+# Built application files & binaries
+*.apk
+*.aab
+*.ap_
+*.dex
+*.class
+
+# Build directories
+build/
+**/build/
+.gradle/
+.kotlin/
+captures/
+.externalNativeBuild/
+.cxx/
+
+# Keystores, signing keys & sensitive credentials
 *.jks
 *.keystore
-app-release.apk
+debug.keystore
+local.properties
+.env
+.env.*
+!.env.example
+
+# IDE & Editor files
+*.iml
+.idea/
+.vscode/
+
+# OS generated files
+.DS_Store
+Thumbs.db
+ehthumbs.db
+
+# Log files
+*.log
