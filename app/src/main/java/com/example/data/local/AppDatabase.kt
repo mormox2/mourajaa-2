@@ -52,7 +52,7 @@ abstract class AppDatabase : RoomDatabase() {
                     AppDatabase::class.java,
                     "muraaja_database"
                 )
-                    .fallbackToDestructiveMigration()
+                    .fallbackToDestructiveMigration(true)
                     .addCallback(DatabaseCallback(scope))
                     .build()
                 INSTANCE = instance

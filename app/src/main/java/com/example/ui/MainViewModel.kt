@@ -18,6 +18,8 @@ import com.example.domain.model.MasteryLevel
 import com.example.domain.model.NightReviewPlan
 import com.example.domain.model.SubjectWithReview
 import com.example.ui.focus.FocusModeHelper
+import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -48,41 +50,72 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     private val db = AppDatabase.getDatabase(application, viewModelScope)
     val repository = MuraajaRepository(db)
 
+    companion object {
+        fun getTodayDayOfWeek(): DayOfWeekAr {
+            return try {
+                when (LocalDate.now().dayOfWeek) {
+                    java.time.DayOfWeek.MONDAY -> DayOfWeekAr.MONDAY
+                    java.time.DayOfWeek.TUESDAY -> DayOfWeekAr.TUESDAY
+                    java.time.DayOfWeek.WEDNESDAY -> DayOfWeekAr.WEDNESDAY
+                    java.time.DayOfWeek.THURSDAY -> DayOfWeekAr.THURSDAY
+                    java.time.DayOfWeek.FRIDAY -> DayOfWeekAr.FRIDAY
+                    java.time.DayOfWeek.SATURDAY -> DayOfWeekAr.MONDAY // Weekend defaults to next school day (Monday)
+                    java.time.DayOfWeek.SUNDAY -> DayOfWeekAr.MONDAY
+                    else -> DayOfWeekAr.TUESDAY
+                }
+            } catch (e: Exception) {
+                DayOfWeekAr.TUESDAY
+            }
+        }
+    }
+
     private val _currentScreen = MutableStateFlow<Screen>(Screen.Home)
     val currentScreen: StateFlow<Screen> = _currentScreen.asStateFlow()
 
-    // Day filter for Schedule screen
-    private val _selectedDay = MutableStateFlow(DayOfWeekAr.TUESDAY)
+    // Day filter for Schedule screen (defaults to today's school day)
+    private val _selectedDay = MutableStateFlow(getTodayDayOfWeek())
     val selectedDay: StateFlow<DayOfWeekAr> = _selectedDay.asStateFlow()
 
     val activeChild: StateFlow<ChildEntity?> = repository.activeChild
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), null)
 
+    fun currentChildId(): Long = activeChild.value?.id ?: 1L
+
     val allChildren: StateFlow<List<ChildEntity>> = repository.allChildren
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
+    @OptIn(ExperimentalCoroutinesApi::class)
     val subjects: StateFlow<List<SubjectEntity>> = activeChild
-        .combine(repository.getSubjectsForChild(1)) { child, subs ->
-            subs
+        .flatMapLatest { child ->
+            val id = child?.id ?: 1L
+            repository.getSubjectsForChild(id)
         }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
     val reminderSettings: StateFlow<ReminderSettingsEntity?> = repository.reminderSettings
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), null)
 
-    // Today's classes based on selectedDay or current Tuesday
-    private val _currentDay = MutableStateFlow(DayOfWeekAr.TUESDAY)
+    // Today's classes based on current date
+    private val _currentDay = MutableStateFlow(getTodayDayOfWeek())
     val currentDay: StateFlow<DayOfWeekAr> = _currentDay.asStateFlow()
 
     private val _nightPlan = MutableStateFlow<NightReviewPlan?>(null)
     val nightPlan: StateFlow<NightReviewPlan?> = _nightPlan.asStateFlow()
 
     // All schedule entries for active child
-    val allScheduleEntries: StateFlow<List<ScheduleEntryEntity>> = repository.getAllScheduleEntries(1)
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+    @OptIn(ExperimentalCoroutinesApi::class)
+    val allScheduleEntries: StateFlow<List<ScheduleEntryEntity>> = activeChild
+        .flatMapLatest { child ->
+            val id = child?.id ?: 1L
+            repository.getAllScheduleEntries(id)
+        }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
     // Completed reviews today count
-    val completedReviewsToday: StateFlow<Int> = repository.getCompletedSessionsForDate(1, getTodayDateString())
-        .combine(MutableStateFlow(0)) { list, _ -> list.size }
+    @OptIn(ExperimentalCoroutinesApi::class)
+    val completedReviewsToday: StateFlow<Int> = activeChild
+        .flatMapLatest { child ->
+            val id = child?.id ?: 1L
+            repository.getCompletedSessionsForDate(id, getTodayDateString())
+        }.map { list -> list.size }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 0)
 
     // Focus Mode (Lock phone & Pin app) state
@@ -113,7 +146,11 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     init {
-        refreshNightReviewPlan()
+        viewModelScope.launch {
+            activeChild.collect {
+                refreshNightReviewPlan()
+            }
+        }
     }
 
     fun navigateTo(screen: Screen) {
@@ -131,7 +168,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
     fun refreshNightReviewPlan() {
         viewModelScope.launch {
-            val plan = repository.calculateNightReviewPlan(1, _currentDay.value)
+            val plan = repository.calculateNightReviewPlan(currentChildId(), _currentDay.value)
             _nightPlan.value = plan
         }
     }
@@ -147,7 +184,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     ) {
         viewModelScope.launch {
             repository.addScheduleEntry(
-                childId = 1,
+                childId = currentChildId(),
                 subjectId = subjectId,
                 dayOfWeek = dayOfWeek,
                 startTime = startTime,
@@ -184,7 +221,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     fun addSubject(name: String, icon: String, masteryLevel: Int, reviewMinutes: Int) {
         viewModelScope.launch {
             repository.addSubject(
-                childId = 1,
+                childId = currentChildId(),
                 name = name,
                 icon = icon,
                 masteryLevel = masteryLevel,
@@ -195,8 +232,12 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     // Badges & Rewards System
-    val badges: StateFlow<List<BadgeItem>> = repository.getBadgesWithProgress(1)
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+    @OptIn(ExperimentalCoroutinesApi::class)
+    val badges: StateFlow<List<BadgeItem>> = activeChild
+        .flatMapLatest { child ->
+            val id = child?.id ?: 1L
+            repository.getBadgesWithProgress(id)
+        }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
     val totalEarnedStars: StateFlow<Int> = badges.map { list ->
         list.filter { it.isUnlocked }.sumOf { it.definition.starsAward }
@@ -216,7 +257,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     fun finishReviewSession(subjectId: Long, actualMinutes: Int, rating: Int, isFocusMode: Boolean = false) {
         viewModelScope.launch {
             val newlyUnlocked = repository.recordReviewSession(
-                childId = 1,
+                childId = currentChildId(),
                 subjectId = subjectId,
                 date = getTodayDateString(),
                 plannedMinutes = actualMinutes,

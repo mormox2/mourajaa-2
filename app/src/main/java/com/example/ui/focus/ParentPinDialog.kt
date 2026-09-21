@@ -21,7 +21,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Backspace
+import androidx.compose.material.icons.automirrored.filled.Backspace
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.LockOpen
@@ -276,7 +276,7 @@ fun ParentPinDialog(
                         )
                         PinKeypadButton("0", Modifier.weight(1f)) { handleDigit("0") }
                         PinKeypadIconButton(
-                            icon = Icons.Default.Backspace,
+                            icon = Icons.AutoMirrored.Filled.Backspace,
                             contentDescription = "حذف رقم",
                             modifier = Modifier.weight(1f),
                             onClick = { handleBackspace() }

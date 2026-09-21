@@ -56,6 +56,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.domain.model.DayOfWeekAr
+import java.time.LocalDate
 import com.example.ui.MainViewModel
 import com.example.ui.Screen
 import com.example.ui.focus.ParentPinDialog
@@ -105,6 +106,20 @@ fun HomeScreen(
     val nextDay = DayOfWeekAr.getNextSchoolDay(currentDay.key)
     val tomorrowClasses = scheduleEntries.filter { it.dayOfWeek.equals(nextDay.key, ignoreCase = true) }
 
+    val formattedDate = remember {
+        try {
+            val now = LocalDate.now()
+            val arabicMonths = listOf(
+                "يناير", "فبراير", "مارس", "أبريل", "مايو", "يونيو",
+                "يوليو", "أغسطس", "سبتمبر", "أكتوبر", "نوفمبر", "ديسمبر"
+            )
+            val monthName = arabicMonths.getOrElse(now.monthValue - 1) { "" }
+            "${now.dayOfMonth} $monthName"
+        } catch (e: Exception) {
+            "اليوم"
+        }
+    }
+
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -133,7 +148,7 @@ fun HomeScreen(
                     modifier = Modifier.size(20.dp)
                 )
                 Text(
-                    text = "${currentDay.titleAr}، 22 سبتمبر",
+                    text = "${currentDay.titleAr}، $formattedDate",
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.Bold,
                     color = MaterialTheme.colorScheme.onSurface
